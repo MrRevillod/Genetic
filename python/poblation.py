@@ -1,6 +1,6 @@
 
 import numpy as np
-from entity import Entity
+from python.entity import Entity
 
 # 10 x 20
 

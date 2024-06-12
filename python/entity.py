@@ -66,6 +66,8 @@ class Entity:
 
     def mutate(self):
 
+        # denormalize
+
         value = np.random.randint(0, 9)
 
         if value != 8:
