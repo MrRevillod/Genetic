@@ -3,6 +3,7 @@ use std::thread::sleep;
 
 use colored::*;
 use rand::Rng;
+use colored::*;
 
 use crate::position::*;
 use crate::entity::Entity;
@@ -47,7 +48,7 @@ impl Poblation {
             }
 
             entities.push(Entity::new(
-                entities.len() as u8, Position::Some(new_pos)
+                entities.len().to_string(), Position::Some(new_pos)
             ));
 
             i -= 1;
@@ -125,8 +126,8 @@ impl Poblation {
             for x in 0..DIMENSIONS.1 {
                 let current_post = Point::new(x as isize, y as isize);
 
-                if let Some(entity) = self.entities.iter().find(|e| e.get_position() == current_post && e.alive) {
-                    print!("{:^5} |", format!("E{}", entity.id));
+                if let Some(entity) = self.entities.iter().find(|e| e.get_position() == current_post) {
+                    print!("E{} ", entity.id.custom_color(entity.color));
                 } else {
                     print!("{:^5} |", " ");
                 }
