@@ -98,6 +98,8 @@ impl Entity {
         // That index is the direction to move
 
         let dir = DIRECTIONS[index];
+    
+        dev_moves.push(format!("E-{} : {}", self.id, DEBUG_DIRECTIONS[&dir]));
 
         // Get the current position of the entity
     
@@ -105,7 +107,7 @@ impl Entity {
 
         // If the entity is in the last column, return the current position (no move)
 
-        if current_pos.x == DIMENSIONS.1 as isize {
+        if current_pos.x >= DIMENSIONS.1 as isize {
             return current_pos
         }
 
@@ -118,8 +120,6 @@ impl Entity {
         if next_pos.y < 0 { next_pos.y = 0 }
     
         if next_pos.y >= DIMENSIONS.0 as isize { next_pos.y = DIMENSIONS.0 as isize - 1 }
-
-        dev_moves.push(format!("E-{} : {}", self.id, DEBUG_DIRECTIONS[&dir]));
     
         next_pos
     }
