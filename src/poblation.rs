@@ -1,5 +1,6 @@
 
 use rand::Rng;
+use colored::*;
 
 use crate::position::*;
 use crate::entity::Entity;
@@ -32,7 +33,7 @@ impl Poblation {
             }
 
             entities.push(Entity::new(
-                entities.len() as u8, Position::Some(new_pos)
+                entities.len().to_string(), Position::Some(new_pos)
             ));
 
             i -= 1;
@@ -50,7 +51,7 @@ impl Poblation {
                 let current_post = Point::new(x as isize, y as isize);
 
                 if let Some(entity) = self.entities.iter().find(|e| e.get_position() == current_post) {
-                    print!("E{} ", entity.id);
+                    print!("E{} ", entity.id.custom_color(entity.color));
                 } else {
                     print!("nn ");
                 }

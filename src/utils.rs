@@ -1,3 +1,5 @@
+use colored::CustomColor;
+
 
 pub fn normalize(values: &Vec<f64>) -> Vec<f64> {
 
@@ -22,4 +24,14 @@ pub fn cumulative(values: &Vec<f64>) -> Vec<f64> {
     }
 
     acc_values
+}
+
+pub fn to_rgb(color: (f64, f64, f64)) -> CustomColor {
+    let (r, g, b) = (
+        (color.0 * 255.0) as u8,
+        (color.1 * 255.0) as u8,
+        (color.2 * 255.0) as u8
+    );
+
+    CustomColor::new(r, g, b)
 }
