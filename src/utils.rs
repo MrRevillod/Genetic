@@ -1,16 +1,13 @@
 use colored::CustomColor;
 
 
-pub fn normalize(values: &Vec<f64>) -> Vec<f64> {
+pub fn normalize(values: &mut Vec<f64>) {
 
     let sum = values.iter().sum::<f64>();
-    let mut normalized = vec![];
 
     for i in 0..values.len() {
-        normalized.push(values[i] / sum)
+        values[i] = values[i] / sum;
     }
-
-    normalized
 }
 
 pub fn cumulative(values: &Vec<f64>) -> Vec<f64> {
