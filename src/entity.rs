@@ -1,13 +1,11 @@
 
 use rand::Rng;
-use core::f64;
 use std::ops::Add;
 use colored::CustomColor;
 
 use crate::utils;
 use crate::position::*;
-use crate::{DIMENSIONS, MUTATION_PROB};
-use crate::random;
+use crate::DIMENSIONS;
 
 pub type Color<T> = (T, T, T);
 
@@ -64,7 +62,7 @@ impl Entity {
             values[i] = rng.gen()
         }
 
-        utils::normalize(&mut values);
+        values = utils::normalize(&values);
 
         let color = utils::to_rgb((values[2], values[3], values[4]));
 
@@ -138,12 +136,6 @@ impl Entity {
         next_pos
     }
 
-    pub fn mutate(values: &mut Vec<f64>) {
-        let mut rng = rand::thread_rng();
-        let index = rng.gen_range(0..values.len());
-        values[index] = rng.gen::<f64>();
-    }
-
     // crossover -> mutate (muta al hacer la cruza)
 }
     
@@ -159,8 +151,8 @@ impl Add for Entity {
         let father_c2 = self.values[4..=7].to_vec();
         let mother_c2 = rhs.values[0..=3].to_vec();
 
-        let mut c1_values = [father_c1, mother_c1].concat();
-        let mut c2_values = [father_c2, mother_c2].concat();
+        let c1_values = [father_c1, mother_c1].concat();
+        let c2_values = [father_c2, mother_c2].concat();
 
         let c1_id = format!("c_{}_{}", self.id, rhs.id);
         let c2_id = format!("c_{}_{}", rhs.id, self.id);
@@ -170,16 +162,6 @@ impl Add for Entity {
 
         let c1_color = utils::to_rgb((c1_values[2], c1_values[3], c1_values[4]));
         let c2_color = utils::to_rgb((c2_values[2], c2_values[3], c2_values[4]));
-
-        let mut rng = rand::thread_rng();
-
-        if rng.gen::<f64>() <= MUTATION_PROB {
-            if rng.gen_bool(0.5) {
-                Entity::mutate(&mut c1_values);
-            } else {
-                Entity::mutate(&mut c2_values);
-            }
-        }
 
         (
             Entity::from(c1_id, c1_values, c1_killer, Position::None, c1_color),

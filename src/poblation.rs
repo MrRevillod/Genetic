@@ -60,7 +60,7 @@ impl Poblation {
     pub fn run(&mut self) {
 
         let mut dev_moves: Vec<String> = Vec::new();
-        let killers: Vec<String> = self.entities.iter().filter(|e| e.is_killer()).map(|e| e.id.clone()).collect();
+        let killers: Vec<u8> = self.entities.iter().filter(|e| e.is_killer()).map(|e| e.id).collect();
         let mut kills_moves: Vec<String> = Vec::new();
         
         // println!("\nInitial state");
