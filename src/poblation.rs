@@ -1,12 +1,11 @@
 
-use std::thread::sleep;
-
-use colored::*;
 use rand::Rng;
 use colored::*;
 
 use crate::position::*;
+use crate::random::random;
 use crate::entity::Entity;
+use crate::utils::trunc_uuid;
 use crate::{DIMENSIONS, SAMPLE, N_ITERATIONS};
 
 /// Poblation struct
@@ -21,9 +20,9 @@ use crate::{DIMENSIONS, SAMPLE, N_ITERATIONS};
 /// * `run` - Run the simulation of the Poblation
 /// * `show` - Show the Poblation state
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Poblation {
-    pub entities: Vec<Entity>
+    pub entities: Vec<Entity>,
 }
 
 impl Poblation {
@@ -36,10 +35,8 @@ impl Poblation {
 
         while i > 0 {
 
-            let mut rng = rand::thread_rng();
-
-            let random_row = rng.gen_range(0..DIMENSIONS.0) as isize;
-            let random_col = rng.gen_range(0..=1) as isize;
+            let random_row = random().gen_range(0..DIMENSIONS.0) as isize;
+            let random_col = random().gen_range(0..=1) as isize;
 
             let new_pos = Point::new(random_col, random_row);
 
@@ -47,9 +44,7 @@ impl Poblation {
                 continue;
             }
 
-            entities.push(Entity::new(
-                entities.len().to_string(), Position::Some(new_pos)
-            ));
+            entities.push(Entity::new(Position::Some(new_pos)));
 
             i -= 1;
         }
@@ -59,25 +54,16 @@ impl Poblation {
 
     pub fn run(&mut self) {
 
-        let mut dev_moves: Vec<String> = Vec::new();
-        let killers: Vec<u8> = self.entities.iter().filter(|e| e.is_killer()).map(|e| e.id).collect();
-        let mut kills_moves: Vec<String> = Vec::new();
-        
-        // println!("\nInitial state");
-        // println!("Killers: {:?}", killers);
-        self.show_2();
+        self.show();
 
-        for iteration in 1..=N_ITERATIONS {
+        for _ in 1..=N_ITERATIONS {
             
             let mut dead_entities = Vec::new();
 
             for i in 0..self.entities.len() {
 
-                if self.entities[i].alive == false {
-                    continue;
-                }
-                
-                let entity_next_pos = self.entities[i].next_position(&mut dev_moves);
+                if !self.entities[i].alive { continue }
+                let entity_next_pos = self.entities[i].next_position();
 
                 let next_pos = self.entities.iter().position(
                     |e| e.get_position() == entity_next_pos && e.alive && e.id != self.entities[i].id
@@ -87,14 +73,127 @@ impl Poblation {
 
                     if self.entities[i].is_killer() && !self.entities[j].is_killer() {
                         dead_entities.push(j);
-                        kills_moves.push(format!("E{} killed E{}", self.entities[i].id, self.entities[j].id));
+                        self.entities[i].position = Some(entity_next_pos);
+
                     } else if !self.entities[i].is_killer() && self.entities[j].is_killer() {
                         dead_entities.push(i);
-                        kills_moves.push(format!("E{} killed E{}", self.entities[j].id, self.entities[i].id));
+                        self.entities[j].position = Some(entity_next_pos);
+
                     } else if self.entities[i].is_killer() && self.entities[j].is_killer() {
-                        dead_entities.push(i);
+                        dead_entities.push(i); dead_entities.push(j);
+                    }
+                
+                } else {
+                    self.entities[i].position = Some(entity_next_pos);
+                }
+                
+                for &i in dead_entities.iter() {
+                    self.entities[i].alive = false;
+                }
+
+                self.entities[i].fitness += 1;
+            }
+
+            self.show();
+        }
+    }
+
+    pub fn get_final_entities(&self) -> Vec<Entity> {
+
+        let mut final_entities = Vec::new();
+
+        for entity in self.entities.iter() {
+            if entity.alive && entity.get_position().x == DIMENSIONS.1 as isize - 1 {
+                final_entities.push(entity.clone());
+            }
+        }
+
+        final_entities
+    }
+
+    pub fn show(&self) {
+
+        let mut buffer = String::new();
+        let total_width = DIMENSIONS.1 as usize * 7;
+    
+        buffer.push_str(&format!("\n+{:-<1$}+\n", "", total_width));
+    
+        for y in 0..DIMENSIONS.0 {
+
+            for _ in 0..3 {
+
+                buffer.push_str("|");
+    
+                for x in 0..DIMENSIONS.1 {
+                    let current_post = Point::new(x as isize, y as isize);
+    
+                    if let Some(e) = self.entities.iter().find(|e| e.get_position() == current_post && e.alive) {
+                        buffer.push_str(&format!("{}|", (0..6).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
+                    } else {
+                        buffer.push_str(&format!(" {}|", " ".repeat(5)));
+                    };
+                }
+    
+                buffer.push_str("\n");
+            }
+    
+            if y < DIMENSIONS.0 - 1 {
+                buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
+            }
+        }
+    
+        buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
+    
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        std::process::Command::new("clear").status().unwrap();
+    
+        print!("{}", buffer);
+    }
+}
+
+impl Poblation {
+
+    pub fn run_debug(&mut self) {
+
+        let killers = self.entities.iter()
+            .filter(|e| e.is_killer()).map(|e| trunc_uuid(&e.id))
+            .collect::<Vec<String>>()
+        ;
+        
+        println!("\nInitial state");
+        println!("Killers: {:?}", killers);
+
+        for _ in 1..=N_ITERATIONS {
+            
+            let mut dead_entities = Vec::new();
+
+            for i in 0..self.entities.len() {
+
+                if !self.entities[i].alive { continue }
+                
+                let entity_next_pos = self.entities[i].next_position();
+                println!("E{}: {:?}", trunc_uuid(&self.entities[i].id), entity_next_pos);
+
+                let next_pos = self.entities.iter().position(
+                    |e| e.get_position() == entity_next_pos && e.alive && e.id != self.entities[i].id
+                );
+
+                if let Some(j) = next_pos {
+
+                    if self.entities[i].is_killer() && !self.entities[j].is_killer() {
                         dead_entities.push(j);
-                        kills_moves.push(format!("E{} and E{} killed each other", self.entities[i].id, self.entities[j].id));
+                        self.entities[i].position = Some(entity_next_pos);
+
+                        // moves.push(format!("E{} killed E{}", trunc_uuid(&self.entities[i].id), trunc_uuid(&self.entities[j].id)));
+
+                    } else if !self.entities[i].is_killer() && self.entities[j].is_killer() {
+                        dead_entities.push(i);
+                        self.entities[j].position = Some(entity_next_pos);
+                        // moves.push(format!("E{} killed E{}", trunc_uuid(&self.entities[j].id), trunc_uuid(&self.entities[i].id)));
+
+                    } else if self.entities[i].is_killer() && self.entities[j].is_killer() {
+                        dead_entities.push(i); dead_entities.push(j);
+                        // moves.push(format!("E{} and E{} killed each other", trunc_uuid(&self.entities[i].id), trunc_uuid(&self.entities[j].id)));
                     }
                 
                 } else {
@@ -107,18 +206,16 @@ impl Poblation {
             }
 
             // println!("Iteration {}", iteration);
-            self.show_2();
-            // println!("Moves: {:?}\n", dev_moves);
-            // println!("Kills: {:?}", kills_moves);
+            self.show_debug();
+            // println!("Moves: {:?}\n", moves);
 
-            dev_moves.clear();
-            kills_moves.clear();
+            // moves.clear();
         }
     }
-    
-    pub fn show(&self) {
+
+    pub fn show_debug(&self) {
         println!();
-        println!("+{:-<5}+", "-".repeat(DIMENSIONS.1 as usize * 6));
+        println!("+{:-<12}+", "-".repeat(DIMENSIONS.1 as usize * 12));
 
         for y in 0..DIMENSIONS.0 {
             print!("|");
@@ -126,54 +223,21 @@ impl Poblation {
             for x in 0..DIMENSIONS.1 {
                 let current_post = Point::new(x as isize, y as isize);
 
-                if let Some(entity) = self.entities.iter().find(|e| e.get_position() == current_post) {
-                    print!("E{} ", entity.id.custom_color(entity.color));
+                if let Some(entity) = self.entities.iter().find(|e| e.get_position() == current_post && e.alive) {
+                    print!(" {:^10}|", format!("E{}", trunc_uuid(&entity.id)));
+
                 } else {
-                    print!("{:^5} |", " ");
+                    print!(" {:^10}|", " ");
                 }
             }
 
             println!();
             if y < DIMENSIONS.0 - 1 {
-                println!("+{:-<5}+", "-".repeat(DIMENSIONS.1 as usize * 6));
+                println!("+{:-<12}+", "-".repeat(DIMENSIONS.1 as usize * 12));
             }
         }
 
-        println!("+{:-<5}+", "-".repeat(DIMENSIONS.1 as usize * 6));
+        println!("+{:-<11}+", "-".repeat(DIMENSIONS.1 as usize * 12));
         println!();
     }
-
-
-pub fn show_2(&self) {
-
-    std::thread::sleep(std::time::Duration::from_millis(500));
-    std::process::Command::new("clear").status().unwrap();
-
-    println!();
-    println!("+{:-<11}+", "-".repeat(DIMENSIONS.1 as usize * 12));
-
-    for y in 0..DIMENSIONS.0 {
-        for _ in 0..3 {
-            print!("| ");
-
-            for x in 0..DIMENSIONS.1 {
-                let current_post = Point::new(x as isize, y as isize);
-
-                if let Some(entity) = self.entities.iter().find(|e| e.get_position() == current_post && e.alive) {
-                    print!("{:^11} |", (0..9).map(|_| "*".green().to_string()).collect::<String>());
-                } else {
-                    print!("{:^11} |", " ".repeat(8));
-                }
-            }
-
-            println!();
-        }
-        if y < DIMENSIONS.0 - 1 {
-            println!("+{:-<11}+", "-".repeat(DIMENSIONS.1 as usize * 12));
-        }
-    }
-
-    println!("+{:-<11}+", "-".repeat(DIMENSIONS.1 as usize * 12));
-    println!();
-}
 }
