@@ -14,7 +14,7 @@ pub type Position = Option<Point>;
 /// 
 /// Represents a point (x, y)
 
-#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq, )]
 pub struct Point {
     pub x: isize,
     pub y: isize
