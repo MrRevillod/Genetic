@@ -37,7 +37,7 @@ pub struct Entity {
     pub alive: bool,
     pub position: Position,
     pub color: CustomColor,
-    pub fitness: usize
+    pub fitness: usize,
 }
 
 impl Entity {
@@ -79,7 +79,9 @@ impl Entity {
     /// * `position` - Entity position (Point)
     /// * `color` - Entity color
 
-    pub fn from(values: Vec<f64>, killer: bool, position: Position, color: CustomColor) -> Self{
+    pub fn from(values: Vec<f64>, killer: bool, 
+        position: Position, color: CustomColor) -> Self {
+
         Entity { 
             id: utils::uuid(), 
             values, 
@@ -87,7 +89,7 @@ impl Entity {
             position, 
             color, 
             alive: true,
-            fitness: 0
+            fitness: 0,
         }
     }
 
@@ -109,7 +111,7 @@ impl Entity {
     /// 
     /// * `Point` - Next entity position (Point)
 
-    pub fn next_position(&self) -> Point {
+    pub fn next_position(&mut self) -> Point {
     
         // Generate a random number between 0 and 1
         
@@ -143,6 +145,7 @@ impl Entity {
             return current_pos
         }
 
+        self.fitness += 1;
         next_pos
     }
 }

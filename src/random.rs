@@ -10,6 +10,7 @@ pub struct RngGenerator;
 pub type RandomGenerator = Arc<Mutex<StdRng>>;
 
 impl RngGenerator {
+
     pub fn new(rng: StdRng) -> RandomGenerator {
         Arc::new(Mutex::new(rng))
     }

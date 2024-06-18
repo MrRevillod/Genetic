@@ -1,4 +1,6 @@
 
+use std::time::Duration;
+
 use rand::Rng;
 use colored::*;
 
@@ -54,16 +56,22 @@ impl Poblation {
 
     pub fn run(&mut self) {
 
+        let mut finished_entities: Vec<Entity> = Vec::new();
+
         self.show();
 
         for _ in 1..=N_ITERATIONS {
             
-            let mut dead_entities = Vec::new();
+            let mut dead_entities: Vec<usize> = Vec::new();
 
             for i in 0..self.entities.len() {
 
                 if !self.entities[i].alive { continue }
                 let entity_next_pos = self.entities[i].next_position();
+
+                if entity_next_pos.x == DIMENSIONS.1 as isize {
+                    finished_entities.push(self.entities[i].clone());
+                }
 
                 let next_pos = self.entities.iter().position(
                     |e| e.get_position() == entity_next_pos && e.alive && e.id != self.entities[i].id
@@ -73,11 +81,11 @@ impl Poblation {
 
                     if self.entities[i].is_killer() && !self.entities[j].is_killer() {
                         dead_entities.push(j);
-                        self.entities[i].position = Some(entity_next_pos);
+                        self.entities[j].position = Position::Some(entity_next_pos);
 
                     } else if !self.entities[i].is_killer() && self.entities[j].is_killer() {
                         dead_entities.push(i);
-                        self.entities[j].position = Some(entity_next_pos);
+                        self.entities[j].position = Position::Some(entity_next_pos);
 
                     } else if self.entities[i].is_killer() && self.entities[j].is_killer() {
                         dead_entities.push(i); dead_entities.push(j);
@@ -88,27 +96,12 @@ impl Poblation {
                 }
                 
                 for &i in dead_entities.iter() {
-                    self.entities[i].alive = false;
+                    self.entities[i].alive = false
                 }
-
-                self.entities[i].fitness += 1;
             }
 
             self.show();
         }
-    }
-
-    pub fn get_final_entities(&self) -> Vec<Entity> {
-
-        let mut final_entities = Vec::new();
-
-        for entity in self.entities.iter() {
-            if entity.alive && entity.get_position().x == DIMENSIONS.1 as isize - 1 {
-                final_entities.push(entity.clone());
-            }
-        }
-
-        final_entities
     }
 
     pub fn show(&self) {
@@ -116,7 +109,8 @@ impl Poblation {
         let mut buffer = String::new();
         let total_width = DIMENSIONS.1 as usize * 7;
     
-        buffer.push_str(&format!("\n+{:-<1$}+\n", "", total_width));
+        buffer.push_str(&format!("\x1B[2J\x1B[1;1H"));
+        buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
     
         for y in 0..DIMENSIONS.0 {
 
@@ -125,13 +119,22 @@ impl Poblation {
                 buffer.push_str("|");
     
                 for x in 0..DIMENSIONS.1 {
-                    let current_post = Point::new(x as isize, y as isize);
+
+                    let current_pos = Point::new(x as isize, y as isize);
     
-                    if let Some(e) = self.entities.iter().find(|e| e.get_position() == current_post && e.alive) {
-                        buffer.push_str(&format!("{}|", (0..6).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
+                    if let Some(e) = self.entities.iter().find(|e| e.get_position() == current_pos && e.alive) {
+
+                        if e.is_killer() {
+                            buffer.push_str(&format!("{}", (0..2).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
+                            buffer.push_str(&format!("{}", (0..2).map(|_| "*".white().to_string()).collect::<String>()));
+                            buffer.push_str(&format!("{}|", (0..2).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
+                        } else {
+                            buffer.push_str(&format!("{}|", (0..6).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
+                        }
+
                     } else {
                         buffer.push_str(&format!(" {}|", " ".repeat(5)));
-                    };
+                    }
                 }
     
                 buffer.push_str("\n");
@@ -144,10 +147,9 @@ impl Poblation {
     
         buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
     
-        std::thread::sleep(std::time::Duration::from_millis(150));
-        std::process::Command::new("clear").status().unwrap();
-    
         print!("{}", buffer);
+
+        std::thread::sleep(Duration::from_millis(150));
     }
 }
 
@@ -159,11 +161,13 @@ impl Poblation {
             .filter(|e| e.is_killer()).map(|e| trunc_uuid(&e.id))
             .collect::<Vec<String>>()
         ;
+
+        let mut moves = Vec::new();
         
         println!("\nInitial state");
         println!("Killers: {:?}", killers);
 
-        for _ in 1..=N_ITERATIONS {
+        for iteration in 1..=N_ITERATIONS {
             
             let mut dead_entities = Vec::new();
 
@@ -183,17 +187,16 @@ impl Poblation {
                     if self.entities[i].is_killer() && !self.entities[j].is_killer() {
                         dead_entities.push(j);
                         self.entities[i].position = Some(entity_next_pos);
-
-                        // moves.push(format!("E{} killed E{}", trunc_uuid(&self.entities[i].id), trunc_uuid(&self.entities[j].id)));
+                        moves.push(format!("E{} killed E{}", trunc_uuid(&self.entities[i].id), trunc_uuid(&self.entities[j].id)));
 
                     } else if !self.entities[i].is_killer() && self.entities[j].is_killer() {
                         dead_entities.push(i);
                         self.entities[j].position = Some(entity_next_pos);
-                        // moves.push(format!("E{} killed E{}", trunc_uuid(&self.entities[j].id), trunc_uuid(&self.entities[i].id)));
+                        moves.push(format!("E{} killed E{}", trunc_uuid(&self.entities[j].id), trunc_uuid(&self.entities[i].id)));
 
                     } else if self.entities[i].is_killer() && self.entities[j].is_killer() {
                         dead_entities.push(i); dead_entities.push(j);
-                        // moves.push(format!("E{} and E{} killed each other", trunc_uuid(&self.entities[i].id), trunc_uuid(&self.entities[j].id)));
+                        moves.push(format!("E{} and E{} killed each other", trunc_uuid(&self.entities[i].id), trunc_uuid(&self.entities[j].id)));
                     }
                 
                 } else {
@@ -205,11 +208,11 @@ impl Poblation {
                 }
             }
 
-            // println!("Iteration {}", iteration);
+            println!("Iteration {}", iteration);
             self.show_debug();
-            // println!("Moves: {:?}\n", moves);
+            println!("Moves: {:?}\n", moves);
 
-            // moves.clear();
+            moves.clear();
         }
     }
 
