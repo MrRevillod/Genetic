@@ -4,7 +4,7 @@ use std::time::Duration;
 use rand::Rng;
 use colored::*;
 
-use crate::position::*;
+use crate::{position::*, N_GENERATIONS};
 use crate::random::random;
 use crate::entity::Entity;
 use crate::utils::trunc_uuid;
@@ -56,51 +56,66 @@ impl Poblation {
 
     pub fn run(&mut self) {
 
-        let mut finished_entities: Vec<Entity> = Vec::new();
+        let mut generation = 1;
 
-        self.show();
+        while generation <= N_GENERATIONS {
 
-        for _ in 1..=N_ITERATIONS {
-            
-            let mut dead_entities: Vec<usize> = Vec::new();
-
-            for i in 0..self.entities.len() {
-
-                if !self.entities[i].alive { continue }
-                let entity_next_pos = self.entities[i].next_position();
-
-                if entity_next_pos.x == DIMENSIONS.1 as isize {
-                    finished_entities.push(self.entities[i].clone());
-                }
-
-                let next_pos = self.entities.iter().position(
-                    |e| e.get_position() == entity_next_pos && e.alive && e.id != self.entities[i].id
-                );
-
-                if let Some(j) = next_pos {
-
-                    if self.entities[i].is_killer() && !self.entities[j].is_killer() {
-                        dead_entities.push(j);
-                        self.entities[j].position = Position::Some(entity_next_pos);
-
-                    } else if !self.entities[i].is_killer() && self.entities[j].is_killer() {
-                        dead_entities.push(i);
-                        self.entities[j].position = Position::Some(entity_next_pos);
-
-                    } else if self.entities[i].is_killer() && self.entities[j].is_killer() {
-                        dead_entities.push(i); dead_entities.push(j);
+            let mut finished_entities: Vec<Entity> = Vec::new();
+    
+            self.show_debug();
+    
+            for _ in 1..=N_ITERATIONS {
+                
+                let mut dead_entities: Vec<usize> = Vec::new();
+    
+                for i in 0..self.entities.len() {
+    
+                    if !self.entities[i].alive { continue }
+    
+                    if finished_entities.iter().any(|e| e.id == self.entities[i].id) { 
+                        continue 
                     }
-                
-                } else {
-                    self.entities[i].position = Some(entity_next_pos);
+    
+                    if self.entities[i].get_position().x == DIMENSIONS.1 as isize - 1 {
+                        finished_entities.push(self.entities[i].clone());
+                        continue;
+                    }
+    
+                    let entity_next_pos = self.entities[i].next_position();
+    
+                    let next_pos = self.entities.iter().position(
+                        |e| e.get_position() == entity_next_pos && e.alive && e.id != self.entities[i].id
+                    );
+    
+                    if let Some(j) = next_pos {
+    
+                        if self.entities[i].is_killer() && !self.entities[j].is_killer() {
+                            dead_entities.push(j);
+                            self.entities[j].position = Position::Some(entity_next_pos);
+    
+                        } else if !self.entities[i].is_killer() && self.entities[j].is_killer() {
+                            dead_entities.push(i);
+                            self.entities[j].position = Position::Some(entity_next_pos);
+    
+                        } else if self.entities[i].is_killer() && self.entities[j].is_killer() {
+                            dead_entities.push(i); dead_entities.push(j);
+                        }
+                    
+                    } else {
+                        self.entities[i].position = Some(entity_next_pos);
+                    }
+                    
+                    for &i in dead_entities.iter() {
+                        self.entities[i].alive = false
+                    }
                 }
-                
-                for &i in dead_entities.iter() {
-                    self.entities[i].alive = false
-                }
+    
+                self.show_debug();
             }
+    
+            println!("\nFinished entities: {:?}", finished_entities.iter().map(|e| trunc_uuid(&e.id)).collect::<Vec<String>>());
 
-            self.show();
+            generation += 1;
         }
     }
 
