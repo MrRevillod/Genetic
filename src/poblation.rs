@@ -4,7 +4,7 @@ use std::time::Duration;
 use rand::Rng;
 use colored::*;
 
-use crate::{position::*, N_GENERATIONS};
+use crate::{position::*, N_GENERATIONS, SHOW_THRESHOLD};
 use crate::random::random;
 use crate::entity::Entity;
 use crate::utils::trunc_uuid;
@@ -54,11 +54,36 @@ impl Poblation {
         Poblation { entities }
     }
 
+    pub fn assign_positions(&self, entities: &mut Vec<Entity>) {
+
+        let mut i = 0;
+        while i < entities.len() {
+
+            let random_row = random().gen_range(0..DIMENSIONS.0) as isize;
+            let random_col = random().gen_range(0..=1) as isize;
+            
+            let new_pos = Point::new(random_col, random_row);
+
+            if entities.iter().any(|e| e.get_position() == new_pos) {
+                continue;
+            }
+
+            entities[i].position = Position::Some(new_pos);
+            i += 1;
+        }
+    }
+
+    // pub fn selections(&self, ) {
+        
+    // }
+
     pub fn run(&mut self) {
 
         let mut generation = 1;
 
         while generation <= N_GENERATIONS {
+
+            if generation % SHOW_THRESHOLD == 0 { self.show() }
 
             let mut finished_entities: Vec<Entity> = Vec::new();
     
@@ -110,9 +135,20 @@ impl Poblation {
                     }
                 }
     
-                self.show_debug();
+                if generation % SHOW_THRESHOLD == 0 { self.show_debug() }
             }
-    
+
+            // let mut fitness: Vec<usize> = Vec::new();
+            // for x in 0..finished_entities.len() {
+            //     fitness.push(finished_entities[x].fitness);
+            // }
+
+            // fitness.sort();
+
+            // let mut vec: Vec<Entity> = finished_entities.clone();
+
+            finished_entities.sort_by(|a, b| a.fitness.cmp(&b.fitness));
+
             println!("\nFinished entities: {:?}", finished_entities.iter().map(|e| trunc_uuid(&e.id)).collect::<Vec<String>>());
 
             generation += 1;

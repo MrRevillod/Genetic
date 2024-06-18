@@ -7,6 +7,8 @@ use colored::CustomColor;
 use crate::utils;
 use crate::DIMENSIONS;
 use crate::position::*;
+use crate::utils::random;
+use crate::MUTATE_PROBABILTY;
 
 pub type Color<T> = (T, T, T);
 
@@ -148,6 +150,19 @@ impl Entity {
         self.fitness += 1;
         next_pos
     }
+
+    pub fn mutate(&mut self) {
+        
+        let index = utils::random().gen_range(0..9);
+
+        if index == 8 {
+            self.killer = !self.killer;
+            return
+        }
+
+        self.values[index] = utils::random().gen::<f64>();
+        utils::normalize(&mut self.values);
+    }
 }
     
 impl Add for Entity {
@@ -156,24 +171,33 @@ impl Add for Entity {
 
     fn add(self, rhs: Self) -> Self::Output {
 
-        let father_c1 = self.values[0..=3].to_vec();
-        let mother_c1 = rhs.values[4..=7].to_vec();
+        let c1_1 = self.values[0..=3].to_vec();
+        let c1_2 = self.values[4..=7].to_vec();
+        
+        let c2_1 = rhs.values[0..=3].to_vec();
+        let c2_2 = rhs.values[4..=7].to_vec();
 
-        let father_c2 = self.values[4..=7].to_vec();
-        let mother_c2 = rhs.values[0..=3].to_vec();
+        let children_1_v = [c1_1, c2_2].concat();
+        let children_2_v = [c2_1, c1_2].concat();
 
-        let c1_values = [father_c1, mother_c1].concat();
-        let c2_values = [father_c2, mother_c2].concat();
+        let children_1_color = utils::to_rgb((children_1_v[2], children_1_v[3], children_1_v[4]));
+        let children_2_color = utils::to_rgb((children_2_v[2], children_2_v[3], children_2_v[4]));
 
-        let c1_killer = rhs.killer;
-        let c2_killer = self.killer;
+        let mut children_1 = Entity::from(children_1_v, rhs.killer, Position::None, children_1_color);
+        let mut children_2 = Entity::from(children_2_v, self.killer, Position::None, children_2_color);
 
-        let c1_color = utils::to_rgb((c1_values[2], c1_values[3], c1_values[4]));
-        let c2_color = utils::to_rgb((c2_values[2], c2_values[3], c2_values[4]));
+        if random().gen::<f64>() <= MUTATE_PROBABILTY {
 
-        (
-            Entity::from(c1_values, c1_killer, Position::None, c1_color),
-            Entity::from(c2_values, c2_killer, Position::None, c2_color)
-        )
+            let mutation_target = random().gen_range(0..=2);
+
+            match mutation_target {
+                0 => children_1.mutate(),
+                1 => children_2.mutate(),
+
+                _ => { children_1.mutate(); children_2.mutate() }
+            }
+        }
+
+        (children_1, children_2)
     }
 }
