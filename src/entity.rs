@@ -5,10 +5,12 @@ use std::ops::Add;
 use colored::CustomColor;
 
 use crate::utils;
+use crate::utils::normalize;
 use crate::DIMENSIONS;
 use crate::position::*;
 use crate::utils::random;
-use crate::MUTATE_PROBABILTY;
+use crate::MUTATION_PROBABILTY;
+use crate::N_ITERATIONS;
 
 pub type Color<T> = (T, T, T);
 
@@ -64,12 +66,12 @@ impl Entity {
             values[i] = utils::random().gen::<f64>()
         }
 
-        utils::normalize(&mut values);
+        values = utils::normalize(&values);
 
         let color = utils::to_rgb((values[2], values[3], values[4]));
         let killer = utils::random().gen_bool(0.05);
         
-        Entity { id: utils::uuid(), values, killer, position, alive: true, color, fitness: 0 }
+        Entity { id: utils::uuid(), values, killer, position, alive: true, color, fitness: N_ITERATIONS as usize }
     }
 
     /// Create a new Entity from a given values
@@ -91,7 +93,7 @@ impl Entity {
             position, 
             color, 
             alive: true,
-            fitness: 0,
+            fitness: N_ITERATIONS as usize,
         }
     }
 
@@ -104,10 +106,6 @@ impl Entity {
     }
 
     /// Get the next entity position
-    /// 
-    /// # Arguments
-    /// 
-    /// * `dev_moves` - Vector of debug moves
     /// 
     /// # Returns
     /// 
@@ -122,7 +120,7 @@ impl Entity {
 
         // Find the index of the first value in the cumulative vector
         // that is greater than the random number
-    
+
         let index = cumulatives.iter().position(|&v| v > prob).unwrap();
 
         // That index is the direction to move
@@ -134,7 +132,7 @@ impl Entity {
         let current_pos = self.get_position();
 
         if current_pos.x == (DIMENSIONS.1 - 1) as isize {
-            return current_pos;
+            return current_pos
         }
 
         // Calculate the next position and verify the limits
@@ -147,21 +145,24 @@ impl Entity {
             return current_pos
         }
 
-        self.fitness += 1;
+        self.fitness -= 1;
         next_pos
     }
 
     pub fn mutate(&mut self) {
-        
-        let index = utils::random().gen_range(0..9);
 
-        if index == 8 {
-            self.killer = !self.killer;
-            return
+        if random().gen::<f64>() <= MUTATION_PROBABILTY {
+
+            let index = utils::random().gen_range(0..=8);
+    
+            if index == 8 {
+                self.killer = !self.killer;
+                return
+            }
+    
+            self.values[index] = utils::random().gen::<f64>();
+            self.values = utils::normalize(&self.values);
         }
-
-        self.values[index] = utils::random().gen::<f64>();
-        utils::normalize(&mut self.values);
     }
 }
     
@@ -177,8 +178,8 @@ impl Add for Entity {
         let c2_1 = rhs.values[0..=3].to_vec();
         let c2_2 = rhs.values[4..=7].to_vec();
 
-        let children_1_v = [c1_1, c2_2].concat();
-        let children_2_v = [c2_1, c1_2].concat();
+        let children_1_v = normalize(&[c1_1, c2_2].concat());
+        let children_2_v = normalize(&[c2_1, c1_2].concat());
 
         let children_1_color = utils::to_rgb((children_1_v[2], children_1_v[3], children_1_v[4]));
         let children_2_color = utils::to_rgb((children_2_v[2], children_2_v[3], children_2_v[4]));
@@ -186,17 +187,8 @@ impl Add for Entity {
         let mut children_1 = Entity::from(children_1_v, rhs.killer, Position::None, children_1_color);
         let mut children_2 = Entity::from(children_2_v, self.killer, Position::None, children_2_color);
 
-        if random().gen::<f64>() <= MUTATE_PROBABILTY {
-
-            let mutation_target = random().gen_range(0..=2);
-
-            match mutation_target {
-                0 => children_1.mutate(),
-                1 => children_2.mutate(),
-
-                _ => { children_1.mutate(); children_2.mutate() }
-            }
-        }
+        children_1.mutate();
+        children_2.mutate();
 
         (children_1, children_2)
     }

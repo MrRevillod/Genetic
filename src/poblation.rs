@@ -1,13 +1,14 @@
 
 use std::time::Duration;
+use std::vec;
 
 use rand::Rng;
 use colored::*;
 
-use crate::{position::*, N_GENERATIONS, SHOW_THRESHOLD};
+use crate::{position::*, N_GENERATIONS, P, SHOW_THRESHOLD};
 use crate::random::random;
 use crate::entity::Entity;
-use crate::utils::trunc_uuid;
+use crate::utils::{cumulative, normalize, trunc_uuid};
 use crate::{DIMENSIONS, SAMPLE, N_ITERATIONS};
 
 /// Poblation struct
@@ -57,6 +58,7 @@ impl Poblation {
     pub fn assign_positions(&self, entities: &mut Vec<Entity>) {
 
         let mut i = 0;
+
         while i < entities.len() {
 
             let random_row = random().gen_range(0..DIMENSIONS.0) as isize;
@@ -64,18 +66,62 @@ impl Poblation {
             
             let new_pos = Point::new(random_col, random_row);
 
-            if entities.iter().any(|e| e.get_position() == new_pos) {
+            if entities.iter().any(|e| e.position.is_some() && e.get_position() == new_pos) {
                 continue;
             }
 
             entities[i].position = Position::Some(new_pos);
+
             i += 1;
         }
     }
 
-    // pub fn selections(&self, ) {
+    pub fn selection(&self, final_entities: Vec<Entity>) -> Vec<Entity> {
         
-    // }
+        let mut entities = final_entities;
+        let mut new_entities: Vec<Entity> = Vec::new();
+
+        while entities.len() != DIMENSIONS.0 as usize {
+            entities.push(Entity::new(Position::None));
+        }
+
+        let mut probs: Vec<f64> = vec![P];
+
+        for i in 1..DIMENSIONS.0 as usize {
+            probs.push(P*(1 as f64 - P).powi(i as i32));
+        }
+
+        probs = normalize(&probs);
+
+        let cumulative = cumulative(&probs);
+
+        while new_entities.len() != SAMPLE as usize {
+            
+            let prob_1 = random().gen::<f64>();
+            let mut prob_2 = random().gen::<f64>();
+
+            while prob_1 == prob_2 {
+                prob_2 = random().gen::<f64>();
+            }
+
+            let c1_index = cumulative.iter().position(|&p| p > prob_1).unwrap();
+            let mut c2_index = cumulative.iter().position(|&p| p > prob_2).unwrap();
+
+            while c1_index == c2_index {
+                prob_2 = random().gen::<f64>();
+                c2_index = cumulative.iter().position(|&p| p > prob_2).unwrap();
+            }
+
+            let childrens = entities[c1_index].clone() + entities[c2_index].clone();
+
+            new_entities.push(childrens.0);
+            new_entities.push(childrens.1);
+        }
+
+        self.assign_positions(&mut new_entities);
+
+        new_entities
+    }
 
     pub fn run(&mut self) {
 
@@ -83,13 +129,13 @@ impl Poblation {
 
         while generation <= N_GENERATIONS {
 
-            if generation % SHOW_THRESHOLD == 0 { self.show() }
+            // println!("generation: {}", generation);
 
             let mut finished_entities: Vec<Entity> = Vec::new();
     
-            self.show_debug();
+            // self.show_debug();
     
-            for _ in 1..=N_ITERATIONS {
+            for iteration in 1..=N_ITERATIONS {
                 
                 let mut dead_entities: Vec<usize> = Vec::new();
     
@@ -134,47 +180,47 @@ impl Poblation {
                         self.entities[i].alive = false
                     }
                 }
-    
-                if generation % SHOW_THRESHOLD == 0 { self.show_debug() }
+
+                if generation % SHOW_THRESHOLD == 0 {
+                    self.show(generation, iteration as usize)
+                }
             }
-
-            // let mut fitness: Vec<usize> = Vec::new();
-            // for x in 0..finished_entities.len() {
-            //     fitness.push(finished_entities[x].fitness);
-            // }
-
-            // fitness.sort();
-
-            // let mut vec: Vec<Entity> = finished_entities.clone();
 
             finished_entities.sort_by(|a, b| a.fitness.cmp(&b.fitness));
 
-            println!("\nFinished entities: {:?}", finished_entities.iter().map(|e| trunc_uuid(&e.id)).collect::<Vec<String>>());
+            if finished_entities.len() == DIMENSIONS.0 as usize {
+                self.show(generation, N_ITERATIONS as usize);
+                break
+            }
+
+            self.entities = self.selection(finished_entities);
 
             generation += 1;
         }
+
+        return
     }
 
-    pub fn show(&self) {
-
+    pub fn show(&self, generation_arg: usize, iteration_arg: usize) {
+        
         let mut buffer = String::new();
         let total_width = DIMENSIONS.1 as usize * 7;
-    
+
         buffer.push_str(&format!("\x1B[2J\x1B[1;1H"));
         buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
-    
+
+        let header = format!("| Generation: {:<5} Movement: {:<5} {}|", generation_arg, iteration_arg, " ".repeat(total_width - 36));
+        buffer.push_str(&format!("{}\n", header));
+        buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
+
         for y in 0..DIMENSIONS.0 {
-
             for _ in 0..3 {
-
                 buffer.push_str("|");
-    
+
                 for x in 0..DIMENSIONS.1 {
-
                     let current_pos = Point::new(x as isize, y as isize);
-    
-                    if let Some(e) = self.entities.iter().find(|e| e.get_position() == current_pos && e.alive) {
 
+                    if let Some(e) = self.entities.iter().find(|e| e.get_position() == current_pos && e.alive) {
                         if e.is_killer() {
                             buffer.push_str(&format!("{}", (0..2).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
                             buffer.push_str(&format!("{}", (0..2).map(|_| "*".white().to_string()).collect::<String>()));
@@ -182,27 +228,76 @@ impl Poblation {
                         } else {
                             buffer.push_str(&format!("{}|", (0..6).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
                         }
-
                     } else {
                         buffer.push_str(&format!(" {}|", " ".repeat(5)));
                     }
                 }
-    
+
                 buffer.push_str("\n");
             }
-    
+
             if y < DIMENSIONS.0 - 1 {
                 buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
             }
         }
-    
+
         buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
-    
+
         print!("{}", buffer);
 
-        std::thread::sleep(Duration::from_millis(150));
+        std::thread::sleep(Duration::from_millis(15));
     }
+
 }
+
+//     pub fn show(&self) {
+
+//         let mut buffer = String::new();
+//         let total_width = DIMENSIONS.1 as usize * 7;
+    
+//         buffer.push_str(&format!("\x1B[2J\x1B[1;1H"));
+//         buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
+    
+//         for y in 0..DIMENSIONS.0 {
+
+//             for _ in 0..3 {
+
+//                 buffer.push_str("|");
+    
+//                 for x in 0..DIMENSIONS.1 {
+
+//                     let current_pos = Point::new(x as isize, y as isize);
+    
+//                     if let Some(e) = self.entities.iter().find(|e| e.get_position() == current_pos && e.alive) {
+
+//                         if e.is_killer() {
+//                             buffer.push_str(&format!("{}", (0..2).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
+//                             buffer.push_str(&format!("{}", (0..2).map(|_| "*".white().to_string()).collect::<String>()));
+//                             buffer.push_str(&format!("{}|", (0..2).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
+//                         } else {
+//                             buffer.push_str(&format!("{}|", (0..6).map(|_| "*".custom_color(e.color).to_string()).collect::<String>()));
+//                         }
+
+//                     } else {
+//                         buffer.push_str(&format!(" {}|", " ".repeat(5)));
+//                     }
+//                 }
+    
+//                 buffer.push_str("\n");
+//             }
+    
+//             if y < DIMENSIONS.0 - 1 {
+//                 buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
+//             }
+//         }
+    
+//         buffer.push_str(&format!("+{:-<1$}+\n", "", total_width));
+    
+//         print!("{}", buffer);
+
+//         std::thread::sleep(Duration::from_millis(50));
+//     }
+// }
 
 impl Poblation {
 
