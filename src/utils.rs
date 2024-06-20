@@ -5,13 +5,17 @@ use colored::CustomColor;
 
 pub use crate::random::random;
 
-pub fn normalize(values: &mut Vec<f64>) {
+pub fn normalize(values: &Vec<f64>) -> Vec<f64> {
+
+    let mut normalized: Vec<f64> = Vec::new();
 
     let sum = values.iter().sum::<f64>();
 
     for i in 0..values.len() {
-        values[i] = values[i] / sum
+        normalized.push(values[i] / sum)
     }
+
+    normalized
 }
 
 pub fn cumulative(values: &Vec<f64>) -> Vec<f64> {
@@ -30,7 +34,8 @@ pub fn cumulative(values: &Vec<f64>) -> Vec<f64> {
 pub fn to_rgb(color: (f64, f64, f64)) -> CustomColor {
 
     let mut color = vec![color.0, color.1, color.2];
-    normalize(&mut color);
+
+    color = normalize(&color);
 
     CustomColor::new(
         (color[0] * 255.0) as u8,

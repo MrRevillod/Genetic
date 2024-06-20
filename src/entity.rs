@@ -5,8 +5,12 @@ use std::ops::Add;
 use colored::CustomColor;
 
 use crate::utils;
+use crate::utils::normalize;
 use crate::DIMENSIONS;
 use crate::position::*;
+use crate::utils::random;
+use crate::MUTATION_PROBABILTY;
+use crate::N_ITERATIONS;
 
 pub type Color<T> = (T, T, T);
 
@@ -37,7 +41,7 @@ pub struct Entity {
     pub alive: bool,
     pub position: Position,
     pub color: CustomColor,
-    pub fitness: usize
+    pub fitness: usize,
 }
 
 impl Entity {
@@ -62,12 +66,12 @@ impl Entity {
             values[i] = utils::random().gen::<f64>()
         }
 
-        utils::normalize(&mut values);
+        values = utils::normalize(&values);
 
         let color = utils::to_rgb((values[2], values[3], values[4]));
         let killer = utils::random().gen_bool(0.05);
         
-        Entity { id: utils::uuid(), values, killer, position, alive: true, color, fitness: 0 }
+        Entity { id: utils::uuid(), values, killer, position, alive: true, color, fitness: N_ITERATIONS as usize }
     }
 
     /// Create a new Entity from a given values
@@ -79,7 +83,9 @@ impl Entity {
     /// * `position` - Entity position (Point)
     /// * `color` - Entity color
 
-    pub fn from(values: Vec<f64>, killer: bool, position: Position, color: CustomColor) -> Self{
+    pub fn from(values: Vec<f64>, killer: bool, 
+        position: Position, color: CustomColor) -> Self {
+
         Entity { 
             id: utils::uuid(), 
             values, 
@@ -87,7 +93,7 @@ impl Entity {
             position, 
             color, 
             alive: true,
-            fitness: 0
+            fitness: N_ITERATIONS as usize,
         }
     }
 
@@ -101,15 +107,11 @@ impl Entity {
 
     /// Get the next entity position
     /// 
-    /// # Arguments
-    /// 
-    /// * `dev_moves` - Vector of debug moves
-    /// 
     /// # Returns
     /// 
     /// * `Point` - Next entity position (Point)
 
-    pub fn next_position(&self) -> Point {
+    pub fn next_position(&mut self) -> Point {
     
         // Generate a random number between 0 and 1
         
@@ -118,7 +120,7 @@ impl Entity {
 
         // Find the index of the first value in the cumulative vector
         // that is greater than the random number
-    
+
         let index = cumulatives.iter().position(|&v| v > prob).unwrap();
 
         // That index is the direction to move
@@ -130,7 +132,7 @@ impl Entity {
         let current_pos = self.get_position();
 
         if current_pos.x == (DIMENSIONS.1 - 1) as isize {
-            return current_pos;
+            return current_pos
         }
 
         // Calculate the next position and verify the limits
@@ -143,7 +145,24 @@ impl Entity {
             return current_pos
         }
 
+        self.fitness -= 1;
         next_pos
+    }
+
+    pub fn mutate(&mut self) {
+
+        if random().gen::<f64>() <= MUTATION_PROBABILTY {
+
+            let index = utils::random().gen_range(0..=8);
+    
+            if index == 8 {
+                self.killer = !self.killer;
+                return
+            }
+    
+            self.values[index] = utils::random().gen::<f64>();
+            self.values = utils::normalize(&self.values);
+        }
     }
 }
     
@@ -153,24 +172,24 @@ impl Add for Entity {
 
     fn add(self, rhs: Self) -> Self::Output {
 
-        let father_c1 = self.values[0..=3].to_vec();
-        let mother_c1 = rhs.values[4..=7].to_vec();
+        let c1_1 = self.values[0..=3].to_vec();
+        let c1_2 = self.values[4..=7].to_vec();
+        
+        let c2_1 = rhs.values[0..=3].to_vec();
+        let c2_2 = rhs.values[4..=7].to_vec();
 
-        let father_c2 = self.values[4..=7].to_vec();
-        let mother_c2 = rhs.values[0..=3].to_vec();
+        let children_1_v = normalize(&[c1_1, c2_2].concat());
+        let children_2_v = normalize(&[c2_1, c1_2].concat());
 
-        let c1_values = [father_c1, mother_c1].concat();
-        let c2_values = [father_c2, mother_c2].concat();
+        let children_1_color = utils::to_rgb((children_1_v[2], children_1_v[3], children_1_v[4]));
+        let children_2_color = utils::to_rgb((children_2_v[2], children_2_v[3], children_2_v[4]));
 
-        let c1_killer = rhs.killer;
-        let c2_killer = self.killer;
+        let mut children_1 = Entity::from(children_1_v, rhs.killer, Position::None, children_1_color);
+        let mut children_2 = Entity::from(children_2_v, self.killer, Position::None, children_2_color);
 
-        let c1_color = utils::to_rgb((c1_values[2], c1_values[3], c1_values[4]));
-        let c2_color = utils::to_rgb((c2_values[2], c2_values[3], c2_values[4]));
+        children_1.mutate();
+        children_2.mutate();
 
-        (
-            Entity::from(c1_values, c1_killer, Position::None, c1_color),
-            Entity::from(c2_values, c2_killer, Position::None, c2_color)
-        )
+        (children_1, children_2)
     }
 }
