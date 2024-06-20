@@ -6,6 +6,7 @@ pub mod position;
 pub mod poblation;
 
 use poblation::Poblation;
+use textplots::{Chart, Plot, Shape};
 
 pub const SAMPLE: u8 = 16;
 pub const N_ITERATIONS: u8 = 100;
@@ -21,7 +22,13 @@ pub const P: f64 = 0.5;
 
 fn main() {
 
-    Poblation::new().run();
+    let mut poblation: Poblation = Poblation::new();
+    poblation.run();
+
+    let data: Vec<(f32, f32)> = poblation.get_data();
+    Chart::new(180, 60, 0.0, N_GENERATIONS as f32)
+        .lineplot(&Shape::Lines(&data))
+        .display();
 
     // let mut points = Vec::new();
     

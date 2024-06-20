@@ -26,6 +26,9 @@ use crate::{DIMENSIONS, SAMPLE, N_ITERATIONS};
 #[derive(Clone, Debug)]
 pub struct Poblation {
     pub entities: Vec<Entity>,
+    pub deaths: Vec<f32>,
+    pub killers: Vec<f32>,
+    pub fitness: Vec<f32>,
 }
 
 impl Poblation {
@@ -52,7 +55,7 @@ impl Poblation {
             i -= 1;
         }
 
-        Poblation { entities }
+        Poblation { entities, deaths: Vec::new(), killers: Vec::new(), fitness: Vec::new()}
     }
 
     pub fn assign_positions(&self, entities: &mut Vec<Entity>) {
@@ -123,6 +126,14 @@ impl Poblation {
         new_entities
     }
 
+    pub fn get_data(&self) -> Vec<(f32, f32)> {
+
+        let data = (0..=N_GENERATIONS)
+            .map(|x| (x as f32, *self.deaths.get(x as usize).unwrap_or(&0.0)))
+            .collect();
+        data
+    }
+
     pub fn run(&mut self) {
 
         let mut generation = 1;
@@ -189,16 +200,18 @@ impl Poblation {
             finished_entities.sort_by(|a, b| a.fitness.cmp(&b.fitness));
 
             if finished_entities.len() == DIMENSIONS.0 as usize {
-                self.show(generation, N_ITERATIONS as usize);
+                // self.show(generation, N_ITERATIONS as usize);
                 break
             }
+
+            self.deaths.push((SAMPLE as f32 - finished_entities.len() as f32) / SAMPLE as f32);
+            self.killers.push(self.entities.iter().filter(|e| e.is_killer()).count() as f32 / SAMPLE as f32);
+            self.fitness.push(finished_entities.iter().map(|e| e.fitness).sum::<usize>() as f32 / finished_entities.len() as f32);
 
             self.entities = self.selection(finished_entities);
 
             generation += 1;
         }
-
-        return
     }
 
     pub fn show(&self, generation_arg: usize, iteration_arg: usize) {
