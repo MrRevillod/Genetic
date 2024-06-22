@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use rand::{rngs::StdRng, SeedableRng};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::SEED;
+use crate::constants::SEED;
 
 pub struct RngGenerator;
 pub type RandomGenerator = Arc<Mutex<StdRng>>;

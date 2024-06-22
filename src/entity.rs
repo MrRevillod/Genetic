@@ -5,12 +5,9 @@ use std::ops::Add;
 use colored::CustomColor;
 
 use crate::utils;
-use crate::utils::normalize;
-use crate::DIMENSIONS;
 use crate::position::*;
-use crate::utils::random;
-use crate::MUTATION_PROBABILTY;
-use crate::N_ITERATIONS;
+use crate::constants::*;
+use crate::random::random;
 
 pub type Color<T> = (T, T, T);
 
@@ -50,8 +47,7 @@ impl Entity {
     /// 
     /// # Arguments
     /// 
-    /// * `id` - Entity identifier
-    /// * `position` - Entity position (Point)
+    /// * `position` - Entity position (Option<Point>)
     /// 
     /// # Returns
     /// 
@@ -69,9 +65,9 @@ impl Entity {
         values = utils::normalize(&values);
 
         let color = utils::to_rgb((values[2], values[3], values[4]));
-        let killer = utils::random().gen_bool(0.05);
+        let killer = utils::random().gen_bool(KILLER_PROBABILITY);
         
-        Entity { id: utils::uuid(), values, killer, position, alive: true, color, fitness: N_ITERATIONS as usize }
+        Entity { id: utils::uuid(), values, killer, position, alive: true, color, fitness: N_ITERATIONS }
     }
 
     /// Create a new Entity from a given values
@@ -93,7 +89,7 @@ impl Entity {
             position, 
             color, 
             alive: true,
-            fitness: N_ITERATIONS as usize,
+            fitness: N_ITERATIONS,
         }
     }
 
@@ -178,8 +174,8 @@ impl Add for Entity {
         let c2_1 = rhs.values[0..=3].to_vec();
         let c2_2 = rhs.values[4..=7].to_vec();
 
-        let children_1_v = normalize(&[c1_1, c2_2].concat());
-        let children_2_v = normalize(&[c2_1, c1_2].concat());
+        let children_1_v = utils::normalize(&[c1_1, c2_2].concat());
+        let children_2_v = utils::normalize(&[c2_1, c1_2].concat());
 
         let children_1_color = utils::to_rgb((children_1_v[2], children_1_v[3], children_1_v[4]));
         let children_2_color = utils::to_rgb((children_2_v[2], children_2_v[3], children_2_v[4]));
