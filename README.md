@@ -139,7 +139,7 @@ pub struct Poblation {
 
 #### Métodos de la struct
 
-##### Constructor de la sruct
+##### Constructor de la struct
 
 El constructor de la struct crea un vector de entidades. Itera en un rango dado por la constante SAMPLE y por cada iteración crea una entidad con una posición aleatoria. Si la posición ya está ocupada por otra entidad, se omite la creación de la entidad. De esta manera se garantiza que no existan entidades en la misma posición.
 

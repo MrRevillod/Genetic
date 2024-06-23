@@ -197,7 +197,7 @@ impl Poblation {
 
                     // next_pos_index es un indice opcional, si es Some, entonces hay una entidad en 
                     // la siguiente posición, por lo tanto deberemos comprobar las condiciones de asesinato
-    
+
                     if let Some(j) = next_pos_index {
     
                         if self.entities[i].is_killer() && !self.entities[j].is_killer() {

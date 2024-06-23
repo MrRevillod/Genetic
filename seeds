@@ -1,2 +1,0 @@
-
-4 vivos: pub const SEED: [u8; 32] = [2; 32];
