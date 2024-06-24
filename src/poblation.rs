@@ -1,8 +1,11 @@
 
+use std::collections::HashMap;
 use std::time::Duration;
+use std::vec;
 
 use rand::Rng;
 use colored::*;
+use textplots::{Chart, Plot, Shape};
 
 use crate::position::*;
 use crate::constants::*;
@@ -25,7 +28,9 @@ use crate::utils::{cumulative, normalize, trunc_uuid};
 #[derive(Clone, Debug)]
 pub struct Poblation {
     pub entities: Vec<Entity>,
-    pub history: Vec<Vec<Entity>>
+    pub history: Vec<Vec<Entity>>,
+    pub stadistics: HashMap<&'static str, Vec<(f32, f32)>>,
+    pub actual_gen: usize
 }
 
 impl Poblation {
@@ -52,7 +57,12 @@ impl Poblation {
             i -= 1;
         }
 
-        Poblation { entities, history: Vec::new() }
+        let mut stadistics: HashMap<&'static str, Vec<(f32, f32)>> = HashMap::new();
+        stadistics.insert("deads", Vec::new());
+        stadistics.insert("murders", Vec::new());
+        stadistics.insert("winners", Vec::new());
+        
+        Poblation { entities, history: Vec::new(), stadistics , actual_gen: 1}
     }
 
     pub fn assign_positions(&self, entities: &mut Vec<Entity>) {
@@ -150,9 +160,15 @@ impl Poblation {
         new_entities
     }
 
+    pub fn get_stadistics(&mut self, ) {
+        
+    }
+
     pub fn run(&mut self) {
 
         let mut generation = 1;
+
+        let mut murders = 0;
 
         while generation <= N_GENERATIONS {
 
@@ -203,13 +219,16 @@ impl Poblation {
                         if self.entities[i].is_killer() && !self.entities[j].is_killer() {
                             dead_entities.push(j);
                             self.entities[j].position = Position::Some(entity_next_pos);
+                            murders += 1;
     
                         } else if !self.entities[i].is_killer() && self.entities[j].is_killer() {
                             dead_entities.push(i);
                             self.entities[j].position = Position::Some(entity_next_pos);
+                            murders += 1;
     
                         } else if self.entities[i].is_killer() && self.entities[j].is_killer() {
                             dead_entities.push(i); dead_entities.push(j);
+                            murders += 2;
                         }
                     
                     } else {
@@ -230,10 +249,19 @@ impl Poblation {
 
                 // Mostrar la población cada SHOW_THRESHOLD generaciones
 
-                if generation % SHOW_THRESHOLD == 0 {
-                    self.show(generation, iteration, None)
-                }
+                // if generation % SHOW_THRESHOLD == 0 {
+                //     self.show(generation, iteration, None)
+                // }
             }
+
+            let x = (generation - 1) as f32;
+            let deads = (SAMPLE - on_goal_entities.len()) as f32 / SAMPLE as f32;
+
+            self.stadistics.get_mut("deads").unwrap().push((x, deads));
+            self.stadistics.get_mut("murders").unwrap().push((x, murders as f32 / SAMPLE as f32));
+            self.stadistics.get_mut("winners").unwrap().push((x, on_goal_entities.len() as f32 / SAMPLE as f32));
+
+            // std::thread::sleep(Duration::from_millis(200));
 
             // Ordenar las entidades finales por su fitness (menor a mayor)
 
@@ -244,9 +272,9 @@ impl Poblation {
 
             if on_goal_entities.len() == DIMENSIONS.0 {
 
-                for i in 0..self.history.len() {
-                    self.show(generation, i + 1, Some(&self.history[i]));
-                }
+                // for i in 0..self.history.len() {
+                //     self.show(generation, i + 1, Some(&self.history[i]));
+                // }
 
                 break
             }
@@ -258,11 +286,21 @@ impl Poblation {
 
             // Y se avanza a la siguiente generación
 
+            murders = 0;
             generation += 1;
+            self.actual_gen += 1;
         }
+
+        dbg!(&murders);
 
         return
     }
+
+    pub fn get_total_killers(&mut self) -> usize {
+        self.entities.clone().iter().filter(|e| e.is_killer()).collect::<Vec<&Entity>>().len()
+    }
+
+
 
     pub fn show(&self, n_generation: usize, n_iteration: usize, history: Option<&Vec<Entity>>) {
 
@@ -412,4 +450,11 @@ impl Poblation {
         println!("+{:-<11}+", "-".repeat(DIMENSIONS.1 * 12));
         println!();
     }
+
+    pub fn graphic(&self, key: &'static str) {
+        Chart::new(220, 80, 0.0, self.actual_gen as f32)
+            .lineplot(&Shape::Lines(&self.stadistics.get(key).unwrap()))
+            .display();
+    }
+
 }

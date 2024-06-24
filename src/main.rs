@@ -6,6 +6,7 @@ pub mod position;
 pub mod poblation;
 
 use poblation::Poblation;
+// use utils::continue_prompt;
 
 pub mod constants {
 
@@ -15,8 +16,8 @@ pub mod constants {
     pub const DIMENSIONS: (usize, usize) = (12, 20);
     pub const N_GENERATIONS: usize = 500;
     pub const SHOW_THRESHOLD: usize = 10;
-    pub const MUTATION_PROBABILTY: f64 = 0.0001;
-    pub const KILLER_PROBABILITY: f64 = 0.4;
+    pub const MUTATION_PROBABILTY: f64 = 0.001;
+    pub const KILLER_PROBABILITY: f64 = 0.05;
     
     pub const P: f64 = 0.5;
 }
@@ -25,7 +26,13 @@ pub mod constants {
 
 fn main() {
 
-    Poblation::new().run();
+    let mut pobla = Poblation::new();
+
+    pobla.run();
+
+    pobla.graphic("murders");
+    // continue_prompt();
+    pobla.graphic("winners");
 
     // let mut points = Vec::new();
     
