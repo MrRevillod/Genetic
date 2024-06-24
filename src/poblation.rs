@@ -194,13 +194,6 @@ impl Poblation {
                         continue 
                     }
 
-                    // Si la entidad actual está en la meta, la agregamos al vector de la meta
-    
-                    if self.entities[i].get_position().x == DIMENSIONS.1 as isize - 1 {
-                        on_goal_entities.push(self.entities[i].clone());
-                        continue
-                    }
-
                     // Calculamos la siguiente posición de la entidad actual
     
                     let entity_next_pos: Point = self.entities[i].next_position();
@@ -243,6 +236,13 @@ impl Poblation {
                     for &i in dead_entities.iter() {
                         self.entities[i].alive = false
                     }
+
+                    // Si la entidad actual está en la meta, la agregamos al vector de la meta
+
+                    if self.entities[i].get_position().x == DIMENSIONS.1 as isize - 1 {
+                        on_goal_entities.push(self.entities[i].clone());
+                        continue
+                    }
                 }
                 
                 self.history.push(self.entities.clone());
@@ -250,7 +250,7 @@ impl Poblation {
                 // Mostrar la población cada SHOW_THRESHOLD generaciones
 
                 // if generation % SHOW_THRESHOLD == 0 {
-                //     self.show(generation, iteration, None)
+                    self.show(generation, iteration, None)
                 // }
             }
 
@@ -272,9 +272,9 @@ impl Poblation {
 
             if on_goal_entities.len() == DIMENSIONS.0 {
 
-                // for i in 0..self.history.len() {
-                //     self.show(generation, i + 1, Some(&self.history[i]));
-                // }
+                for i in 0..self.history.len() {
+                    self.show(generation, i + 1, Some(&self.history[i]));
+                }
 
                 break
             }
@@ -295,12 +295,6 @@ impl Poblation {
 
         return
     }
-
-    pub fn get_total_killers(&mut self) -> usize {
-        self.entities.clone().iter().filter(|e| e.is_killer()).collect::<Vec<&Entity>>().len()
-    }
-
-
 
     pub fn show(&self, n_generation: usize, n_iteration: usize, history: Option<&Vec<Entity>>) {
 
@@ -452,6 +446,13 @@ impl Poblation {
     }
 
     pub fn graphic(&self, key: &'static str) {
+
+        let total_width = 80;
+
+        let header = format!("{} {} {}", " ".repeat(total_width - 27), key.to_ascii_uppercase(), " ".repeat(total_width - 36));
+
+        println!("\n{}\n", header);
+        
         Chart::new(220, 80, 0.0, self.actual_gen as f32)
             .lineplot(&Shape::Lines(&self.stadistics.get(key).unwrap()))
             .display();

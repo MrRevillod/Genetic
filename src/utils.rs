@@ -2,8 +2,9 @@
 use uuid::Uuid;
 use rand::RngCore;
 use colored::CustomColor;
-// use termion::input::TermRead;
-// use std::io::{stdin, stdout, Write};
+
+use termion::input::TermRead;
+use std::io::{stdin, stdout, Write};
 
 pub use crate::random::random;
 
@@ -56,13 +57,13 @@ pub fn uuid() -> Uuid {
     Uuid::from_bytes(bytes)
 }
 
-// pub fn continue_prompt() {
-//     let stdin = stdin();
-//     let mut stdout = stdout();
+pub fn continue_prompt() {
+    let stdin = stdin();
+    let mut stdout = stdout();
 
-//     write!(stdout, "Press any key to continue...").unwrap();
-//     stdout.flush().unwrap();
+    write!(stdout, "Press any key to continue...").unwrap();
+    stdout.flush().unwrap();
 
-//     stdin.keys().next();
-// }
+    stdin.keys().next();
+}
 

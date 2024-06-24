@@ -6,7 +6,7 @@ pub mod position;
 pub mod poblation;
 
 use poblation::Poblation;
-// use utils::continue_prompt;
+use utils::continue_prompt;
 
 pub mod constants {
 
@@ -22,24 +22,15 @@ pub mod constants {
     pub const P: f64 = 0.5;
 }
 
-// use textplots::*;
-
 fn main() {
 
-    let mut pobla = Poblation::new();
+    let mut poblation = Poblation::new();
 
-    pobla.run();
-
-    pobla.graphic("murders");
-    // continue_prompt();
-    pobla.graphic("winners");
-
-    // let mut points = Vec::new();
+    poblation.run();
+    continue_prompt();
     
-    // for x in -10..=1000 {
-    //     let x_f32 = x as f32;
-    //     points.push((x_f32, x_f32.exp()));
-    // }
+    poblation.graphic("murders");
+    continue_prompt();
     
-    // Chart::default().lineplot(&Shape::Lines(&points)).display();
+    poblation.graphic("winners");
 }
