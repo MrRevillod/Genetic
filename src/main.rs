@@ -12,10 +12,10 @@ pub mod constants {
 
     pub const SAMPLE: usize = 16;
     pub const N_ITERATIONS: usize = 100;
-    pub const SEED: [u8; 32] = [10; 32];
     pub const DIMENSIONS: (usize, usize) = (12, 20);
     pub const N_GENERATIONS: usize = 500;
     pub const SHOW_THRESHOLD: usize = 10;
+    pub const SEED: [u8; 32] = [10; 32];
     pub const MUTATION_PROBABILTY: f64 = 0.001;
     pub const KILLER_PROBABILITY: f64 = 0.05;
     

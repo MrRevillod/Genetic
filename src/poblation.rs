@@ -160,10 +160,6 @@ impl Poblation {
         new_entities
     }
 
-    pub fn get_stadistics(&mut self, ) {
-        
-    }
-
     pub fn run(&mut self) {
 
         let mut generation = 1;
@@ -249,9 +245,9 @@ impl Poblation {
 
                 // Mostrar la población cada SHOW_THRESHOLD generaciones
 
-                // if generation % SHOW_THRESHOLD == 0 {
+                if generation % SHOW_THRESHOLD == 0 {
                     self.show(generation, iteration, None)
-                // }
+                }
             }
 
             let x = (generation - 1) as f32;
@@ -290,8 +286,6 @@ impl Poblation {
             generation += 1;
             self.actual_gen += 1;
         }
-
-        dbg!(&murders);
 
         return
     }
