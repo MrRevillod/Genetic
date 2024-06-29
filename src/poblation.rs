@@ -58,7 +58,6 @@ impl Poblation {
         }
 
         let mut stadistics: HashMap<&'static str, Vec<(f32, f32)>> = HashMap::new();
-        stadistics.insert("deads", Vec::new());
         stadistics.insert("murders", Vec::new());
         stadistics.insert("winners", Vec::new());
         
@@ -75,6 +74,9 @@ impl Poblation {
             let random_col = random().gen_range(0..=1) as isize;
             
             let new_pos = Point::new(random_col, random_row);
+
+            // Si la posición ya está ocupada por otra entidad, continue
+            // .any() => Devuelve el booleano correspondiente a la condición
 
             if entities.iter().any(|e| e.position.is_some() && e.get_position() == new_pos) {
                 continue
@@ -134,6 +136,8 @@ impl Poblation {
             // Obtener los indices de las entidades que se cruzarán en base a las probabilidades
             // aleatorias generadas, nuevamente no pueden ser iguales
 
+            // .position() => Devuelve el indice que cumple con la condición
+
             let c1_index = cumulative.iter().position(|&p| p > prob_1).unwrap();
             let mut c2_index = cumulative.iter().position(|&p| p > prob_2).unwrap();
 
@@ -185,6 +189,8 @@ impl Poblation {
                     if !self.entities[i].alive { continue }
 
                     // Si la entidad actual está en el vector de la meta, continue
+
+                    // .any() => Devuelve el booleano correspondiente a la condición
     
                     if on_goal_entities.iter().any(|e| e.id == self.entities[i].id) { 
                         continue 
@@ -195,6 +201,8 @@ impl Poblation {
                     let entity_next_pos: Point = self.entities[i].next_position();
 
                     // Buscamos si hay otra entidad en la siguiente posición de la entidad actual
+
+                    // .position() => Devuelve el indice que cumple con la condición
     
                     let next_pos_index: Option<usize> = self.entities.iter().position(
                         |e| e.get_position() == entity_next_pos && e.alive && e.id != self.entities[i].id
@@ -228,9 +236,10 @@ impl Poblation {
                     // actual se mueve a la siguiente posición
 
                     // Se recorren las entidades muertas y se les asigna el estado de no viva
+                    // index (&usize) corresponde al indice de la entidad en el vector de entidades
                     
-                    for &i in dead_entities.iter() {
-                        self.entities[i].alive = false
+                    for index in dead_entities.iter() {
+                        self.entities[*index].alive = false // *index => Valor de la referencia
                     }
 
                     // Si la entidad actual está en la meta, la agregamos al vector de la meta
@@ -251,13 +260,9 @@ impl Poblation {
             }
 
             let x = (generation - 1) as f32;
-            let deads = (SAMPLE - on_goal_entities.len()) as f32 / SAMPLE as f32;
 
-            self.stadistics.get_mut("deads").unwrap().push((x, deads));
             self.stadistics.get_mut("murders").unwrap().push((x, murders as f32 / SAMPLE as f32));
             self.stadistics.get_mut("winners").unwrap().push((x, on_goal_entities.len() as f32 / SAMPLE as f32));
-
-            // std::thread::sleep(Duration::from_millis(200));
 
             // Ordenar las entidades finales por su fitness (menor a mayor)
 
@@ -345,6 +350,19 @@ impl Poblation {
         print!("{}", buffer);
 
         std::thread::sleep(Duration::from_millis(25));
+    }
+
+    pub fn graphic(&self, key: &'static str) {
+
+        let total_width = 80;
+
+        let header = format!("{} {} {}", " ".repeat(total_width - 27), key.to_ascii_uppercase(), " ".repeat(total_width - 36));
+
+        println!("\n{}\n", header);
+        
+        Chart::new(220, 80, 0.0, self.actual_gen as f32)
+            .lineplot(&Shape::Lines(&self.stadistics.get(key).unwrap()))
+            .display();
     }
 }
 
@@ -439,17 +457,5 @@ impl Poblation {
         println!();
     }
 
-    pub fn graphic(&self, key: &'static str) {
-
-        let total_width = 80;
-
-        let header = format!("{} {} {}", " ".repeat(total_width - 27), key.to_ascii_uppercase(), " ".repeat(total_width - 36));
-
-        println!("\n{}\n", header);
-        
-        Chart::new(220, 80, 0.0, self.actual_gen as f32)
-            .lineplot(&Shape::Lines(&self.stadistics.get(key).unwrap()))
-            .display();
-    }
 
 }

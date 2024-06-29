@@ -16,9 +16,8 @@ pub mod constants {
     pub const N_GENERATIONS: usize = 500;
     pub const SHOW_THRESHOLD: usize = 10;
     pub const SEED: [u8; 32] = [10; 32];
-    pub const MUTATION_PROBABILTY: f64 = 0.001;
-    pub const KILLER_PROBABILITY: f64 = 0.05;
-    
+    pub const MUTATION_PROBABILTY: f64 = 0.05;
+    pub const KILLER_PROBABILITY: f64 = 0.2;
     pub const P: f64 = 0.5;
 }
 
